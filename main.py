@@ -47,24 +47,34 @@ def create_bot(bot_index):
         if bot.user.mentioned_in(message) or message.content.startswith("!ai"):
             if client:
                 async with message.channel.typing():
-                    try:
-                        user_text = message.content.replace(f'<@{bot.user.id}>', '').replace('!ai', '').strip()
-                        if not user_text:
-                            user_text = "سڵاو"
+                    user_text = message.content.replace(f'<@{bot.user.id}>', '').replace('!ai', '').strip()
+                    if not user_text:
+                        user_text = "سڵاو"
 
-                        # بەکارهێنانی مۆدێلی جێگیری gemini-1.5-pro
+                    response_text = None
+                    # تاقیکردنەوەی مۆدێلی اول
+                    try:
                         response = client.models.generate_content(
-                            model='gemini-1.5-pro',
+                            model='gemini-2.5-flash',
                             contents=user_text,
                         )
-                        
-                        if response.text:
-                            await message.reply(response.text)
-                        else:
-                            await message.reply("هیچ وەڵامێک وەرنەگیرا.")
-                    except Exception as e:
-                        print(f"کێشەی Gemini لە بۆتی {bot.user}: {e}")
-                        await message.reply(f"کێشە لە پەیوەندی بە AI: {e}")
+                        response_text = response.text
+                    except Exception as e1:
+                        print(f"هەڵە لە gemini-2.5-flash: {e1}")
+                        # ئەگەر هی یەکەم ئیرۆری دا، تاقیکردنەوەی مۆدێلی دووەم
+                        try:
+                            response = client.models.generate_content(
+                                model='gemini-1.5-flash',
+                                contents=user_text,
+                            )
+                            response_text = response.text
+                        except Exception as e2:
+                            print(f"هەڵە لە gemini-1.5-flash: {e2}")
+
+                    if response_text:
+                        await message.reply(response_text)
+                    else:
+                        await message.reply("ببوورە، لەم کاتەدا سێرڤەری AI بەردەست نییە. تکایە کەمێکی تر تاقیی بکەرەوە.")
             else:
                 await message.reply("کلیل لە GEMINI_API_KEY ڕێکنەخراوە.")
 
