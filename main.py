@@ -2,16 +2,15 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
-import google.generativeai as genai
+from google import genai
 
-# ڕێکخستنی API Key
+# ڕێکخستنی API Keyی Gemini
 GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 if GENAI_API_KEY:
-    genai.configure(api_key=GENAI_API_KEY)
-    # بەکارهێنانی مۆدێلی نوێتر و خێراتری Gemini
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    client = genai.Client(api_key=GENAI_API_KEY)
 else:
-    model = None
+    client = None
 
 # وەردەگرتنی تۆکینی بۆتەکان
 TOKENS = [
@@ -44,25 +43,28 @@ def create_bot(bot_index):
         if message.author.bot:
             return
 
-        # وەڵامدانەوەی AI بۆ منشن یان f‌ەرمانی !ai
+        # وەڵامدانەوەی AI کاتێک منشن دەکرێت یان بە !ai دەستپێدەکات
         if bot.user.mentioned_in(message) or message.content.startswith("!ai"):
-            if model:
+            if client:
                 async with message.channel.typing():
                     try:
                         user_text = message.content.replace(f'<@{bot.user.id}>', '').replace('!ai', '').strip()
                         if not user_text:
                             user_text = "سڵاو"
 
-                        # ناردنی پرسیار بۆ AI
-                        response = model.generate_content(user_text)
+                        # ناردنی داواکاری بۆ AI
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=user_text,
+                        )
                         
                         if response.text:
                             await message.reply(response.text)
                         else:
-                            await message.reply("هیچ وەڵامێک لە AI وەرنەگیرا.")
+                            await message.reply("هیچ وەڵامێک وەرنەگیرا.")
                     except Exception as e:
                         print(f"کێشەی Gemini لە بۆتی {bot.user}: {e}")
-                        await message.reply("ببووره، کێشەیەک لە پرۆسەی وەڵامدانەوەکەدا ڕوویدا.")
+                        await message.reply(f"کێشە لە پەیوەندی بە AI: {e}")
             else:
                 await message.reply("کلیل لە GEMINI_API_KEY ڕێکنەخراوە.")
 
