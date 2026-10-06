@@ -1,3 +1,5 @@
+discord.py
+google-generativeai
 discord.py[voice]
 gTTS
 PyNaCl
