@@ -1,76 +1,63 @@
 import os
+import asyncio
 import discord
 from discord.ext import commands
-import google.generativeai as genai
-from gtts import gTTS
 
-# ڕێکخستنی Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+# دریافت توکن‌ها از Variables (بدون نوشتن مستقیم توکن)
+TOKENS = [
+    os.getenv("DISCORD_TOKEN_1"),
+    os.getenv("DISCORD_TOKEN_2"),
+    os.getenv("DISCORD_TOKEN_3"),
+    os.getenv("DISCORD_TOKEN_4"),
+    os.getenv("DISCORD_TOKEN_5"),
+    os.getenv("DISCORD_TOKEN_6"),
+    os.getenv("DISCORD_TOKEN_7"),
+    os.getenv("DISCORD_TOKEN_8"),
+]
 
-# ڕێکخستنی Discord Bot
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+# حذف مقادیر خالی
+TOKENS = [t for t in TOKENS if t]
 
-@bot.event
-async def on_ready():
-    print(f"بۆتەکە چالاک بوو وەک: {bot.user}")
+bots = []
 
-# فەرمانەکانی کۆڵی دەنگی (Voice Commands)
-@bot.command()
-async def join(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        await channel.connect()
-        await ctx.send("هاتمە ناو کۆڵی دەنگی!")
-    else:
-        await ctx.send("تکایە پێشتر خۆت بچۆ ناو چەناڵێکی دەنگی!")
+def create_bot(bot_index):
+    intents = discord.Intents.default()
+    intents.message_content = True
+    
+    bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.command()
-async def leave(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("لە چەناڵی دەنگی دەربووم.")
-    else:
-        await ctx.send("من لە هیچ چەناڵێکی دەنگی نیم!")
+    @bot.event
+    async def on_ready():
+        print(f"ربات شماره {bot_index + 1} فعال شد: {bot.user}")
 
-@bot.command()
-async def speak(ctx, *, text: str):
-    if not ctx.voice_client:
+    @bot.command()
+    async def join(ctx):
         if ctx.author.voice:
-            await ctx.author.voice.channel.connect()
-        else:
-            await ctx.send("پێشتر بچۆ ناو چەناڵێکی دەنگی!")
-            return
-
-    # گۆڕینی دەق بۆ دەنگ
-    tts = gTTS(text=text, lang='ar')  # دەتوانیت 'ar' یان 'fa' بەکاربهێنیت
-    tts.save("voice.mp3")
-
-    vc = ctx.voice_client
-    if vc.is_playing():
-        vc.stop()
-
-    vc.play(discord.FFmpegPCMAudio("voice.mp3"))
-    await ctx.send(f"خوێندنەوەی دەنگ: {text}")
-
-# وەڵامدانەوەی تێکست بە Gemini
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-
-    if bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
-        prompt = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        if prompt:
-            async with message.channel.typing():
+            channel = ctx.author.voice.channel
+            if ctx.voice_client is None:
                 try:
-                    response = model.generate_content(prompt)
-                    await message.reply(response.text)
+                    await channel.connect()
+                    await ctx.send(f"🤖 {bot.user.name} وارد ویس شد!")
                 except Exception as e:
-                    await message.reply("هەڵەیەک ڕوویدا لە وەڵامدانەوەدا.")
+                    print(f"خطا در ورود ربات {bot.user}: {e}")
+        else:
+            await ctx.send("لطفاً ابتدا خودتان وارد یک کانال صوتی شوید!")
 
-    await bot.process_commands(message)
+    @bot.command()
+    async def leave(ctx):
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+    return bot
+
+async def main():
+    tasks = []
+    for i, token in enumerate(TOKENS):
+        bot = create_bot(i)
+        bots.append(bot)
+        tasks.append(bot.start(token))
+    
+    await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    asyncio.run(main())
