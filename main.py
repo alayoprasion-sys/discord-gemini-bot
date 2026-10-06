@@ -52,9 +52,9 @@ def create_bot(bot_index):
                         if not user_text:
                             user_text = "سڵاو"
 
-                        # بەکارهێنانی مۆدێلی جێگیری gemini-1.5-flash
+                        # بەکارهێنانی مۆدێلی جێگیری gemini-1.5-pro
                         response = client.models.generate_content(
-                            model='gemini-1.5-flash',
+                            model='gemini-1.5-pro',
                             contents=user_text,
                         )
                         
